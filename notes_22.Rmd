@@ -1,0 +1,285 @@
+---
+title: "Logistic regression"
+author: ""
+date: ""
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE,
+                      comment = "#>", highlight = TRUE, error = TRUE,
+                      fig.align = "center")
+```
+
+## Main ideas
+
+- Fit logistic regression models
+
+- Understand odds
+
+- Interpret logistic regression results
+
+## Packages
+
+```{r packages}
+library(tidyverse)
+library(broom)
+```
+
+## Introduction
+
+Multiple linear regression allows us to relate a numerical response variable to 
+one or more numerical or categorical predictors. We can use multiple linear 
+regression models to understand relationships, assess differences, and make 
+predictions. But what about a situation where the response of interest is 
+categorical and binary?
+
+- spam or not spam
+- malignant or benign tumor
+- survived or died
+- admitted or denied
+- won or lost an election
+
+## Data
+
+On April 15, 1912 the famous ocean liner *Titanic* sank in the North Atlantic 
+after striking an iceberg on its maiden voyage. The dataset `titanic.csv` 
+contains the survival status and other attributes of individuals on the titanic.
+
+- `survived`: survival status  (0 = died, 1 = survived)
+- `pclass`: passenger class (1 = 1st, 2 = 2nd, 3 = 3rd)
+- `name`: name of individual
+- `sex`: sex (male or female)
+- `age`: age in years
+- `fare`: passenger fare in British pounds
+
+We are interested in investigating the variables that contribute to passenger 
+survival.
+
+Let's load our data and preview it.
+
+```{r load_data}
+titanic <- read.csv("data/titanic.csv")
+```
+
+```{r glimpse_data}
+glimpse(titanic)
+```
+
+# Notes
+
+## Exploratory data analysis
+
+```{r eda_1, echo=FALSE}
+titanic %>%
+  mutate(Survival = if_else(survived == 1, "Survived", "Died")) %>%
+  ggplot(aes(x = sex, fill = Survival)) +
+  geom_bar(position = "fill") + 
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "bottom") +
+  labs(x = "Sex", y = "")
+```
+
+
+```{r eda_2, echo=FALSE}
+titanic %>%
+  mutate(Survival = if_else(survived == 1, "Survived", "Died")) %>%
+  ggplot(aes(x = Survival, y = age)) +
+  geom_boxplot() +
+  theme_minimal(base_size = 14) +
+  labs(y = "Age")
+```
+
+## The linear model with multiple predictors
+
+- Population model:
+
+$$ y = \beta_0 + \beta_1~x_1 + \beta_2~x_2 + \cdots + \beta_k~x_k + \epsilon $$
+
+
+- Sample model that we use to estimate the population model:
+  
+$$ \hat{y} = b_0 + b_1~x_1 + b_2~x_2 + \cdots + b_k~x_k $$
+
+
+Denote $p$ as the probability of survival and consider the model below.
+
+$$ p = \beta_0 + \beta_1~x_1 + \beta_2~x_2 + \cdots + \beta_k~x_k + \epsilon$$
+
+
+Can you see any problems with this approach? Let's try and fit a linear model
+with `survived` as the response.
+
+```{r lm_survival}
+lm_survival <- lm(survived ~ age + sex, data = titanic)
+tidy(lm_survival)
+```
+
+Visualizing the fitted model:
+
+```{r linear-model-viz, echo = FALSE}
+ggplot(titanic, aes(x = age, y = survived, color = sex)) + 
+  geom_jitter(height = 0.02, alpha = .5) +
+  geom_line(data = augment(lm_survival), 
+            aes(x = age, y = .fitted, color = sex)) +
+  labs(x = "Age", y = "Survived", color = "Sex") +
+  theme_minimal(base_size = 14)
+```
+
+If you take a look at the diagnostic plots, they will not show what we hope to
+see if we want to use the model as the basis for inference. We need a new tool
+to appropriately handle a binary response.
+
+## Logistic regression
+
+### Preliminaries
+
+- Denote $p$ as the probability of some event (in our case it will be survived)
+
+- The **odds** the event occurs is $\frac{p}{1-p}$
+
+- Odds are sometimes expressed as X : Y and read X to Y. 
+
+It is the ratio of successes to failure, where values larger than 1 favor a 
+success and values smaller than 1 favor a failure.
+
+If $P(A) = 1/2$, what are the odds of $A$?
+
+If $P(B) = 1/3$, what are the odds of $B$?
+
+An **odds ratio** is a ratio of odds. Taking the natural log of the odds yields 
+the **logit** of $p$.
+
+$$\text{logit}(p) = \text{log}\left(\frac{p}{1-p}\right)$$
+
+The logit takes a value of $p$ between 0 and 1 and outputs a value between 
+$-\infty$ and $\infty$.
+
+The inverse logit (logistic) takes a value between $-\infty$ and $\infty$ and 
+outputs a value between 0 and 1.
+
+$$\text{inverse logit}(p) = \frac{e^p}{1+e^p} = \frac{1}{1 + e^{-p}}$$
+
+There is a one-to-one relationship between probabilities and log-odds. If we 
+create a model using the log-odds we can "work backwards" using the logistic
+function to obtain probabilities between 0 and 1.
+
+### The model
+
+$$\text{log}\left(\frac{p}{1-p}\right) = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \ldots + \beta_k x_{k}$$
+
+Use the inverse logit to find the expression for $p$.
+
+$$p = \frac{e^{\beta_0 + \beta_1 x_1 + \beta_2 x_2 + \ldots + \beta_k x_{k}}}{1 + e^{\beta_0 + \beta_1 x_1 + \beta_2 x_2 + \cdots + \beta_k x_{k}}}$$
+
+We can use the logistic regression model to obtain predicted probabilities of 
+success for a binary response variable.
+
+### Fitting a logistic regression model
+
+We handle fitting the model via the `glm` function.
+
+```{r fit-logistic}
+
+
+```
+
+$$\text{log}\left(\frac{\hat{p}}{1-\hat{p}}\right) = 1.11 - 2.50~sex - 0.00206~age$$
+$$\hat{p} = \frac{e^{1.11 - 2.50~sex - 0.00206~age}}{{1+e^{1.11 - 2.50~sex - 0.00206~age}}}$$
+
+Using `augment()` we can obtain the predicted log-odds with `.fitted`.
+
+```{r augment-logistic}
+
+```
+
+### Interpreting coefficients
+
+$$\text{log}\left(\frac{\hat{p}}{1-\hat{p}}\right) = 1.11 - 2.50~sex - 0.00206~age$$
+
+- Holding sex constant, for every additional year of age, we expect the 
+  log-odds of survival to decrease by approximately 0.002.
+
+- Holding age constant, we expect males to have a log-odds of survival that
+  is 2.50 less than females.
+
+We can also put our interpretations in terms of odds.
+
+$$\frac{\hat{p}}{1-\hat{p}} = e^{1.11 - 2.50~sex - 0.00206~age}$$
+
+- Holding sex constant, for every one year increase in age, the odds of 
+  survival is expected to be multiplied by $e^{-0.00206} = 0.998$. 
+
+- Holding age constant, the odds of survival for males is $e^{-2.50} = 0.082$ 
+  times the odds of survival for females.
+
+### Predicted probabilities
+
+We can obtain the predicted probability of success at different levels 
+of the explanatory variables and then plot these probabilities.
+
+This will require a few steps:
+
+1. Construct a new data frame with values for explanatory variables that
+   we want to predict the probabilities for.
+   
+2. Use the inverse logit function to transform `.fitted` from a predicted
+   log odds to a predicted probability.
+   
+```{r predicted_probabilities}
+
+
+```
+
+**Question**: What do you notice about the effect of age and sex here?
+
+### Weaknesses 
+
+- Logistic regression has assumptions: independence and linearity in the 
+  log-odds
+  
+- If the predictors are correlated, coefficient estimates may be unreliable
+
+### Strengths 
+
+- Can transform to odds ratios or predicated probabilities for interpretation 
+  of coefficients
+  
+- Handles numerical and categorical predictors
+
+- Can quantify uncertainty around a prediction
+
+- Can extend to more than 2 categories (multinomial regression)
+
+## Practice Problems
+
+1. Fit a logistic regression model with `sex`, `age`, and their interaction.
+   Plot the predicted probabilities as was done above in code chunk
+   `predicted_probabilities`. Briefly describe what you observe?
+   
+```{r practice_1}
+
+```
+   
+2. Fit a logistic regression model that includes the class (`pclass`) along with
+   other variables of interest. Interpret one of the coefficients on the odds 
+   scale.
+   
+```{r practice_2}
+
+```
+
+3. Use your model from 2 to make a single prediction about your survival 
+   probability for each class.
+
+```{r practice_3}
+
+```
+
+
+## References
+
+- Computing for the Social Sciences. "Logistic Regression." 
+  https://cfss.uchicago.edu/notes/logistic-regression/
